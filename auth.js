@@ -2,7 +2,7 @@
 
 import { client } from './db.js';
 import { $, esc, icon, avisar } from './ui.js';
-import { NOMBRE_APP } from './config.js';
+import { NOMBRE_APP, INSTITUCION, AREA, LOGO } from './config.js';
 
 const urlApp = () => location.origin + location.pathname;
 
@@ -26,10 +26,12 @@ function marco(contenido) {
   c.innerHTML = `
     <div class="auth-card">
       <div class="brand">
-        <div class="logo">${icon('school')}</div>
-        <div><h1 class="title-l">${esc(NOMBRE_APP)}</h1><div class="body-s">Administración de escuelas</div></div>
+        <img class="logo-img" src="${LOGO}" alt="${esc(INSTITUCION)}" onerror="this.nextElementSibling.hidden = false; this.remove()">
+        <div class="logo" hidden>${icon('school')}</div>
+        <div><h1 class="title-l" style="color:var(--primary)">${esc(NOMBRE_APP)}</h1><div class="body-s">Administración de escuelas</div></div>
       </div>
       ${contenido}
+      <div class="auth-pie">${esc(INSTITUCION)} · ${esc(AREA)}</div>
     </div>`;
   $('#arranque').hidden = true;
   $('#app').hidden = true;

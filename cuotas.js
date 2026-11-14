@@ -5,6 +5,7 @@ import { client, estado, esMaster, q, nombreEscuela } from './db.js';
 import { $, esc, icon, pesos, fecha, hoyISO, MESES, MESES_CORTOS, MESES_CICLO, cargando, vacio,
   abrirFormulario, confirmar, avisar, avisarError, descargarCSV, paraArchivo } from './ui.js';
 import { chipsEscuela, escucharChipsEscuela } from './comun.js';
+import { INSTITUCION, AREA } from './config.js';
 
 const anioActual = () => new Date().getFullYear();
 const mesActual = () => new Date().getMonth() + 1;
@@ -143,7 +144,7 @@ async function vistaPlanilla({ cont, escuelaId, cursos, cerrado, cabecera }) {
     const cuerpo = filas.map(a => [a.apellido, a.nombre, a.dni || '',
       ...MESES_CICLO.map(m => pago[a.id]?.[m]?.monto ?? ''), suma(Object.values(pago[a.id] || {}))]);
     const pie = ['TOTAL', '', '', ...MESES_CICLO.map(m => suma(delMes(m))), totalAnio];
-    const titulo = [[`Cuotas ${anioSel}`], [`Escuela: ${nombreEscuela(escuelaId)}`], [`Curso: ${curso.nombre}`], []];
+    const titulo = [[`${INSTITUCION} · ${AREA}`], [`Cuotas ${anioSel}`], [`Escuela: ${nombreEscuela(escuelaId)}`], [`Curso: ${curso.nombre}`], []];
     descargarCSV(`cuotas_${paraArchivo(curso.nombre)}_${anioSel}.csv`, [...titulo, enc, ...cuerpo, pie]);
   };
 }
@@ -209,7 +210,7 @@ async function vistaRendicion({ cont, escuelaId, cursos, cerrado, cabecera }) {
 
   $('[data-descargar]', cont).onclick = () => {
     const filas = [
-      [`Rendición de cuotas · ${MESES[mes]} ${anioSel}`], [`Escuela: ${nombreEscuela(escuelaId)}`],
+      [`${INSTITUCION} · ${AREA}`], [`Rendición de cuotas · ${MESES[mes]} ${anioSel}`], [`Escuela: ${nombreEscuela(escuelaId)}`],
       [`Estado: ${cierre ? `cerrado por ${cierre.cerrado_por} el ${fecha(cierre.cerrado_en)}` : 'abierto (sin cerrar)'}`],
       [`Generado: ${new Date().toLocaleString('es-AR')} por ${estado.perfil.nombre} ${estado.perfil.apellido}`], [],
       ['Curso', 'Apellido', 'Nombre', 'DNI', 'Fecha de pago', 'Recibo', 'Monto', 'Observación', 'Registró'],

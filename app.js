@@ -2,6 +2,7 @@
 
 import { client, estado, esMaster, q, cargarEscuelas } from './db.js';
 import { $, esc, icon, avisarError } from './ui.js';
+import { INSTITUCION, AREA, LOGO } from './config.js';
 import { pantallaLogin, pantallaNoHabilitado, pantallaNuevaContraseña } from './auth.js';
 import { vistaCursos, vistaCurso } from './cursos.js';
 import { vistaCuotas } from './cuotas.js';
@@ -45,6 +46,10 @@ function mostrarApp() {
   $('#arranque').hidden = true;
   $('#acceso').hidden = true;
   $('#app').hidden = false;
+
+  $('#marca').innerHTML = `
+    <img src="${LOGO}" alt="" onerror="this.remove()">
+    <div class="institucion">${esc(INSTITUCION)}<br>${esc(AREA)}</div>`;
 
   const p = estado.perfil;
   $('#subtitulo').textContent = `${p.nombre} ${p.apellido} · ${esMaster() ? 'Master (todas las escuelas)' : p.escuela}`;

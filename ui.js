@@ -62,6 +62,9 @@ export function avisar(texto, tipo = '') {
 // Traduce los errores más comunes de la base a mensajes entendibles
 export function mensajeError(err) {
   const m = err?.message || String(err);
+  if (/MOTIVO_MONTO/.test(m)) return 'El monto es distinto a la cuota del curso: indicá el motivo.';
+  if (/FECHA_FUTURA/.test(m)) return 'La fecha de pago no puede ser posterior a hoy.';
+  if (/schema cache/i.test(m)) return 'La base cambió y la Data API todavía no se enteró. En Neon › Data API, refrescá el esquema (schema cache) y volvé a intentar.';
   if (/MES_CERRADO/.test(m)) return 'Ese mes ya fue rendido y cerrado: no se pueden cargar ni anular pagos.';
   if (/Indicá el motivo|ya estaba anulado|permiso para anular/.test(m)) return m.replace(/^.*?(Indicá|Ese pago|No tenés)/, '$1');
   if (/cuotas_alumno_id_fkey/.test(m)) return 'El alumno tiene pagos registrados: no se puede eliminar. Dalo de baja.';

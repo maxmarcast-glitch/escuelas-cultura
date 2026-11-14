@@ -1,4 +1,4 @@
-// Sección Escuelas (solo master): alta/edición de escuelas y ajustes generales.
+// Sección Escuelas (solo master): alta/edición de escuelas y link del formulario de memos de cada una.
 
 import { client, q, cargarEscuelas } from './db.js';
 import { esc, icon, cargando, vacio, abrirFormulario, avisar, avisarError } from './ui.js';
