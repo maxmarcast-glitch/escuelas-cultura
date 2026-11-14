@@ -3,7 +3,7 @@
 // versión) y, si no hay conexión, se usa la copia guardada. Los datos de Neon
 // nunca se guardan acá.
 
-const CACHE = 'escuelas-v2';
+const CACHE = 'escuelas-v3';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'styles.css',
   'app.js', 'auth.js', 'comun.js', 'config.js', 'cuotas.js', 'cursos.js',

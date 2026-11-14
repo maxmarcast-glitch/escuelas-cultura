@@ -6,6 +6,21 @@ import { NOMBRE_APP } from './config.js';
 
 const urlApp = () => location.origin + location.pathname;
 
+// Llama al servicio de login sin que la pantalla quede colgada:
+// si falla, tarda demasiado o tira una excepción, devuelve { error }.
+async function seguro(llamada, ms = 20000) {
+  try {
+    const r = await Promise.race([
+      llamada(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), ms)),
+    ]);
+    return r || {};
+  } catch (err) {
+    return { error: err };
+  }
+}
+
+
 function marco(contenido) {
   const c = $('#acceso');
   c.innerHTML = `
@@ -27,12 +42,15 @@ function errorEn(form, texto) {
 }
 
 function traducirAuth(err) {
-  const m = (err?.message || '') + ' ' + (err?.code || '');
+  const m = (err?.message || '') + ' ' + (err?.code || '') + (err?.status ? ' status ' + err.status : '');
   if (/EMAIL_NOT_VERIFIED|not verified/i.test(m)) return 'Tenés que verificar tu mail antes de entrar. Revisá tu bandeja (y spam).';
-  if (/INVALID_EMAIL_OR_PASSWORD|invalid/i.test(m)) return 'Mail o contraseña incorrectos.';
+  if (/INVALID_EMAIL_OR_PASSWORD|invalid/i.test(m)) return 'Mail o contraseña incorrectos. Si es tu primera vez, usá "Crear cuenta".';
   if (/USER_ALREADY_EXISTS|already/i.test(m)) return 'Ya hay una cuenta con ese mail. Ingresá o recuperá la contraseña.';
   if (/PASSWORD_TOO_SHORT|too short/i.test(m)) return 'La contraseña es muy corta (mínimo 8 caracteres).';
-  if (/fetch|network/i.test(m)) return 'Sin conexión con el servidor. Revisá internet.';
+  if (/TIMEOUT/.test(m)) return 'El servidor tardó demasiado en responder. Probá de nuevo en unos segundos.';
+  if (/fetch|network|cors/i.test(m)) return 'No se pudo conectar con el servidor de login. Revisá internet (o que el dominio esté autorizado en Neon).';
+  if (/status 401|401/.test(m)) return 'Mail o contraseña incorrectos.';
+  if (/status 403|403/.test(m)) return 'Tenés que verificar tu mail antes de entrar.';
   return err?.message || 'No se pudo completar la operación.';
 }
 
@@ -67,7 +85,7 @@ export function pantallaLogin(alEntrar, pestaña = 'ingresar') {
       if (!email || !password) return errorEn(f, 'Completá mail y contraseña.');
       const btn = f.querySelector('button.btn-filled');
       btn.disabled = true; btn.textContent = 'Ingresando…';
-      const { error } = await client.auth.signIn.email({ email, password });
+      const { error } = await seguro(() => client.auth.signIn.email({ email, password }));
       btn.disabled = false; btn.textContent = 'Ingresar';
       if (error) {
         errorEn(f, traducirAuth(error));
@@ -94,12 +112,12 @@ export function pantallaLogin(alEntrar, pestaña = 'ingresar') {
       if (!f.checkValidity()) return errorEn(f, 'Completá todos los campos (contraseña de 8 caracteres o más).');
       const btn = f.querySelector('button');
       btn.disabled = true; btn.textContent = 'Creando…';
-      const { error } = await client.auth.signUp.email({
+      const { error } = await seguro(() => client.auth.signUp.email({
         name: f.name.value.trim(),
         email: f.email.value.trim().toLowerCase(),
         password: f.password.value,
         callbackURL: urlApp(),
-      });
+      }));
       btn.disabled = false; btn.textContent = 'Crear cuenta';
       if (error) return errorEn(f, traducirAuth(error));
       pantallaCodigo(f.email.value.trim().toLowerCase(), alEntrar, false);
@@ -124,7 +142,7 @@ function pantallaCodigo(email, alEntrar, reenviar = true) {
     </form>`);
   const f = $('form', c);
   const enviar = async () => {
-    const { error } = await client.auth.sendVerificationEmail({ email, callbackURL: urlApp() });
+    const { error } = await seguro(() => client.auth.sendVerificationEmail({ email, callbackURL: urlApp() }));
     error ? errorEn(f, traducirAuth(error)) : avisar('Te enviamos un código nuevo.');
   };
   if (reenviar) enviar();
@@ -134,7 +152,7 @@ function pantallaCodigo(email, alEntrar, reenviar = true) {
     e.preventDefault();
     const otp = f.otp.value.trim();
     if (!otp) return errorEn(f, 'Escribí el código.');
-    const { data, error } = await client.auth.emailOtp.verifyEmail({ email, otp });
+    const { data, error } = await seguro(() => client.auth.emailOtp.verifyEmail({ email, otp }));
     if (error) return errorEn(f, /invalid|expired/i.test(error.message || '') ? 'Código incorrecto o vencido. Pedí uno nuevo.' : traducirAuth(error));
     if (data?.session) return alEntrar();
     avisar('Mail verificado. Ya podés ingresar.');
@@ -161,7 +179,7 @@ function pantallaRecuperar(alEntrar) {
     e.preventDefault();
     const email = f.email.value.trim().toLowerCase();
     if (!email) return errorEn(f, 'Escribí tu mail.');
-    const { error } = await client.auth.requestPasswordReset({ email, redirectTo: urlApp() });
+    const { error } = await seguro(() => client.auth.requestPasswordReset({ email, redirectTo: urlApp() }));
     if (error) return errorEn(f, traducirAuth(error));
     avisar('Si el mail está registrado, te llega el enlace en unos minutos.');
     pantallaLogin(alEntrar);
@@ -180,7 +198,7 @@ export function pantallaNuevaContraseña(token, alEntrar) {
   f.onsubmit = async e => {
     e.preventDefault();
     if (!f.checkValidity()) return errorEn(f, 'Mínimo 8 caracteres.');
-    const { error } = await client.auth.resetPassword({ newPassword: f.password.value, token });
+    const { error } = await seguro(() => client.auth.resetPassword({ newPassword: f.password.value, token }));
     if (error) return errorEn(f, traducirAuth(error));
     history.replaceState(null, '', urlApp());
     avisar('Contraseña actualizada. Ya podés ingresar.');
