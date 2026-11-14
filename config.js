@@ -14,6 +14,11 @@
 export const NEON_URL = 'https://ep-calm-tooth-b6rgb98z.c-2.sa-east-1.aws.neon.tech/neondb';
 
 export const NOMBRE_APP = 'Escuelas · Cultura';
+export const INSTITUCION = 'Municipalidad de Cipolletti';
+export const AREA = 'Dirección General de Cultura';
+// Logo institucional: subí el archivo con este nombre al repo.
+// Si no está, la app muestra el ícono de escuela.
+export const LOGO = 'logo.jpg';
 
 // Ciclo lectivo de cuotas: marzo (3) a noviembre (11)
 export const MES_INICIO = 3;
