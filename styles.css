@@ -242,6 +242,11 @@ table.cuotas th:first-child, table.cuotas td:first-child { text-align: left; pos
 table.cuotas thead th { font-weight: 500; color: var(--on-surface-variant); background: var(--surface-container); }
 table.cuotas thead th:first-child { background: var(--surface-container); }
 table.cuotas th.actual { color: var(--primary); }
+table.cuotas th .material-symbols-rounded { font-size: 14px; }
+.preview { max-height: 260px; overflow: auto; margin-top: 8px; }
+.preview table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.preview th, .preview td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--outline-variant); }
+.preview tr.mal td { color: var(--error); }
 table.cuotas tfoot td { font-weight: 500; background: var(--surface-container); }
 table.cuotas tfoot td:first-child { background: var(--surface-container); }
 .cell {
@@ -249,6 +254,8 @@ table.cuotas tfoot td:first-child { background: var(--surface-container); }
   background: transparent; color: var(--on-surface-variant); cursor: pointer; display: inline-grid; place-items: center;
 }
 .cell.paga { background: var(--success-container); color: var(--on-success-container); border: 0; }
+.cell.paga.distinta { background: var(--warning-container); color: var(--on-warning-container); }
+.cell.cerrada { border-style: solid; border-color: var(--outline-variant); background: var(--surface-container-high); cursor: not-allowed; }
 .cell.vencida { border-color: var(--error); color: var(--error); }
 .cell:focus-visible { outline: 2px solid var(--primary); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--on-surface-variant); margin: 10px 0; }

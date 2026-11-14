@@ -62,6 +62,11 @@ export function avisar(texto, tipo = '') {
 // Traduce los errores más comunes de la base a mensajes entendibles
 export function mensajeError(err) {
   const m = err?.message || String(err);
+  if (/MES_CERRADO/.test(m)) return 'Ese mes ya fue rendido y cerrado: no se pueden cargar ni anular pagos.';
+  if (/Indicá el motivo|ya estaba anulado|permiso para anular/.test(m)) return m.replace(/^.*?(Indicá|Ese pago|No tenés)/, '$1');
+  if (/cuotas_alumno_id_fkey/.test(m)) return 'El alumno tiene pagos registrados: no se puede eliminar. Dalo de baja.';
+  if (/alumnos_dni_por_curso/.test(m)) return 'Ya hay un alumno con ese DNI en este curso.';
+  if (/alumnos_dni_check/.test(m)) return 'El DNI tiene que tener entre 7 y 9 números, sin puntos.';
   if (/duplicate key|unique/i.test(m)) {
     if (/legajo/i.test(m)) return 'Ya existe un usuario con ese legajo.';
     if (/email/i.test(m)) return 'Ya existe un usuario con ese mail.';
@@ -123,13 +128,25 @@ export async function confirmar(titulo, texto, textoOk = 'Eliminar') {
   return r !== null;
 }
 
-// Descarga un CSV que Excel abre bien (separador ; y BOM para acentos)
-export function descargarCSV(nombre, filas) {
-  const txt = filas.map(f => f.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-  const blob = new Blob(['﻿' + txt], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nombre;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+// Texto apto para nombre de archivo: sin tildes ni símbolos
+export const paraArchivo = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\W+/g, '_');
+
+// Descarga un Excel (.xlsx). hojas = { 'Nombre de hoja': [[fila], [fila], ...] }
+// La librería se carga recién al exportar, así la app abre rápido.
+export async function descargarExcel(nombre, hojas) {
+  const { utils, writeFile } = await import('./xlsx.js');
+  const libro = utils.book_new();
+  for (const [titulo, filas] of Object.entries(hojas)) {
+    const hoja = utils.aoa_to_sheet(filas);
+    // Ancho de columnas según el contenido
+    const anchos = [];
+    for (const f of filas) f.forEach((v, i) => { anchos[i] = Math.min(50, Math.max(anchos[i] || 8, String(v ?? '').length + 2)); });
+    hoja['!cols'] = anchos.map(wch => ({ wch }));
+    utils.book_append_sheet(libro, hoja, titulo.slice(0, 31));
+  }
+  writeFile(libro, nombre);
 }
+
+// Compatibilidad: las planillas sueltas ahora también salen en .xlsx
+export const descargarCSV = (nombre, filas) =>
+  descargarExcel(nombre.replace(/\.csv$/, '.xlsx'), { Planilla: filas }).catch(err => avisarError(err));

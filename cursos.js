@@ -129,7 +129,7 @@ export async function vistaCurso(cont, id) {
   const [curso] = await q(client.from('cursos').select('*').eq('id', id));
   if (!curso) { cont.innerHTML = vacio('search_off', 'No se encontró el curso (o no tenés acceso).'); return; }
   const [alumnos, estados] = await Promise.all([
-    q(client.from('alumnos').select('id, nombre, apellido, activo').eq('curso_id', id).order('apellido').order('nombre')),
+    q(client.from('alumnos').select('id, nombre, apellido, dni, activo').eq('curso_id', id).order('apellido').order('nombre')),
     q(client.from('estado_alumnos').select('alumno_id, cuotas_pagas, cuotas_exigibles').eq('curso_id', id)),
   ]);
   const est = Object.fromEntries(estados.map(e => [e.alumno_id, e]));
@@ -165,7 +165,7 @@ export async function vistaCurso(cont, id) {
       <li class="clickable ${a.activo ? '' : 'inactive'}" data-alumno="${a.id}">
         <div class="avatar">${esc(iniciales(a.nombre, a.apellido))}</div>
         <div class="grow"><div>${esc(a.apellido)}, ${esc(a.nombre)}</div>
-          <div class="body-s">${a.activo ? `${est[a.id]?.cuotas_pagas ?? 0} de ${MESES_CICLO.length} cuotas pagas` : 'De baja'}</div></div>
+          <div class="body-s">${a.dni ? `DNI ${esc(a.dni)} · ` : ''}${a.activo ? `${est[a.id]?.cuotas_pagas ?? 0} de ${MESES_CICLO.length} cuotas pagas` : 'De baja'}</div></div>
         ${a.activo ? chipEstado(est[a.id]?.cuotas_pagas ?? 0, est[a.id]?.cuotas_exigibles ?? 0) : ''}
         <button class="icon-btn" data-edit-alumno="${a.id}" title="Editar alumno" aria-label="Editar ${esc(a.nombre)} ${esc(a.apellido)}">${icon('edit')}</button>
       </li>`).join('')}</ul>`
@@ -187,7 +187,7 @@ export async function vistaCurso(cont, id) {
     try { await q(client.from('cursos').delete().eq('id', id)); avisar('Curso eliminado.'); location.hash = '#/cursos'; }
     catch (err) { avisarError(err); }
   };
-  $('[data-varios]', cont).onclick = async () => { if (await cargarVarios(curso)) recargar(); };
+  $('[data-varios]', cont).onclick = async () => { if (await cargarVarios(curso, alumnos)) recargar(); };
 
   cont.querySelector('.list')?.addEventListener('click', async e => {
     const ed = e.target.closest('[data-edit-alumno]');
@@ -208,52 +208,96 @@ export async function vistaCurso(cont, id) {
 }
 
 // ===================== ALUMNOS =====================
+const soloDigitos = v => String(v || '').replace(/\D/g, '');
+
 async function formularioAlumno(curso, alumno = null) {
+  let quiereEliminar = false;
   const fd = await abrirFormulario({
     titulo: alumno ? 'Editar alumno' : 'Nuevo alumno',
     html: `
       <div class="field"><label for="a-ape">Apellido</label><input id="a-ape" name="apellido" required maxlength="60" value="${esc(alumno?.apellido)}"></div>
       <div class="field"><label for="a-nom">Nombre</label><input id="a-nom" name="nombre" required maxlength="60" value="${esc(alumno?.nombre)}"></div>
+      <div class="field"><label for="a-dni">DNI (opcional)</label><input id="a-dni" name="dni" inputmode="numeric" maxlength="12" value="${esc(alumno?.dni)}">
+        <span class="hint">Solo números, sin puntos. Evita cargar dos veces al mismo alumno.</span></div>
       ${alumno ? `<label class="row"><input type="checkbox" name="activo" ${alumno.activo ? 'checked' : ''}> Alumno activo (desmarcá para darlo de baja sin perder sus pagos)</label>
-        <p style="margin-top:16px"><button type="button" class="btn btn-text" data-eliminar style="color:var(--error)">${icon('delete')} Eliminar alumno y sus cuotas</button></p>` : ''}`,
+        <p style="margin-top:16px"><button type="button" class="btn btn-text" data-eliminar style="color:var(--error)">${icon('delete')} Eliminar alumno</button></p>` : ''}`,
     alAbrir: d => {
       const b = d.querySelector('[data-eliminar]');
-      if (b) b.onclick = async () => {
-        d.close();
-        if (await confirmar('Eliminar alumno', `Se borran ${alumno.nombre} ${alumno.apellido} y todas sus cuotas registradas. Si dejó de venir, mejor dalo de baja.`)) {
-          try { await q(client.from('alumnos').delete().eq('id', alumno.id)); avisar('Alumno eliminado.'); location.reload(); }
-          catch (err) { avisarError(err); }
-        }
-      };
+      if (b) b.onclick = () => { quiereEliminar = true; d.close(); };
     },
   });
+
+  if (!fd && quiereEliminar) {
+    if (!(await confirmar('Eliminar alumno', `¿Eliminar a ${alumno.nombre} ${alumno.apellido}? Solo se puede si no tiene pagos registrados; si dejó de venir, dalo de baja.`))) return false;
+    try { await q(client.from('alumnos').delete().eq('id', alumno.id)); avisar('Alumno eliminado.'); return true; }
+    catch (err) { avisarError(err); return false; }
+  }
   if (!fd) return false;
-  const datos = { nombre: fd.get('nombre').trim(), apellido: fd.get('apellido').trim() };
+
+  const dni = soloDigitos(fd.get('dni'));
+  if (dni && !/^\d{7,9}$/.test(dni)) { avisar('El DNI tiene que tener entre 7 y 9 números.', 'error'); return formularioAlumno(curso, { ...alumno, nombre: fd.get('nombre'), apellido: fd.get('apellido'), dni }); }
+  const datos = { nombre: fd.get('nombre').trim(), apellido: fd.get('apellido').trim(), dni: dni || null };
   if (alumno) datos.activo = fd.get('activo') === 'on';
   try {
-    if (alumno) await q(client.from('alumnos').update(datos).eq('id', alumno.id));
+    if (alumno?.id) await q(client.from('alumnos').update(datos).eq('id', alumno.id));
     else await q(client.from('alumnos').insert({ ...datos, curso_id: curso.id }));
-    avisar(alumno ? 'Alumno actualizado.' : 'Alumno agregado.');
+    avisar(alumno?.id ? 'Alumno actualizado.' : 'Alumno agregado.');
     return true;
   } catch (err) { avisarError(err); return false; }
 }
 
-async function cargarVarios(curso) {
+// Interpreta el texto pegado: una línea por alumno, "Apellido, Nombre, DNI"
+// (el DNI es opcional). Acepta coma, punto y coma o tabulación (copiado de Excel).
+function interpretarLista(texto, existentes) {
+  const dnisCurso = new Set(existentes.map(a => a.dni).filter(Boolean));
+  const vistos = new Set();
+  return texto.split('\n').map(l => l.trim()).filter(Boolean).map((linea, i) => {
+    const partes = linea.split(/\s*[,;\t]\s*/).map(p => p.trim());
+    const [apellido = '', nombre = '', dniTxt = ''] = partes;
+    const dni = soloDigitos(dniTxt);
+    let error = '';
+    if (partes.length < 2 || !apellido || !nombre) error = 'Falta la coma entre apellido y nombre';
+    else if (partes.length > 3) error = 'Sobran comas: usá Apellido, Nombre, DNI';
+    else if (dniTxt && !/^\d{7,9}$/.test(dni)) error = 'DNI inválido';
+    else if (dni && dnisCurso.has(dni)) error = 'Ese DNI ya está en el curso';
+    else if (dni && vistos.has(dni)) error = 'DNI repetido en la lista';
+    if (dni) vistos.add(dni);
+    return { n: i + 1, linea, apellido, nombre, dni: dni || null, error };
+  });
+}
+
+async function cargarVarios(curso, existentes = [], textoPrevio = '') {
   const fd = await abrirFormulario({
     titulo: 'Cargar varios alumnos',
-    textoOk: 'Agregar',
+    textoOk: 'Revisar',
     html: `
-      <p class="body-s">Un alumno por línea, con el formato <b>Apellido, Nombre</b>. Podés pegar la columna desde Excel.</p>
-      <div class="field"><label for="varios">Alumnos</label><textarea id="varios" name="lista" rows="8" required placeholder="Pérez, Juan&#10;Gómez, María"></textarea></div>`,
+      <p class="body-s">Un alumno por línea, separando con <b>coma</b>:</p>
+      <p style="margin:4px 0 8px"><code>Apellido, Nombre, DNI</code></p>
+      <p class="body-s">El DNI es opcional. Si el nombre es compuesto, va junto sin coma: <code>Pérez, Juan Carlos, 40111222</code>. También podés pegar tres columnas copiadas de Excel.</p>
+      <div class="field" style="margin-top:12px"><label for="varios">Alumnos</label>
+        <textarea id="varios" name="lista" rows="8" required placeholder="Pérez, Juan Carlos, 40111222&#10;Gómez, María&#10;López Díaz, Ana, 39222333">${esc(textoPrevio)}</textarea></div>`,
   });
   if (!fd) return false;
-  const filas = fd.get('lista').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-    const [apellido, ...resto] = l.split(/[,;\t]/);
-    return { curso_id: curso.id, apellido: apellido.trim(), nombre: resto.join(' ').trim() || '-' };
-  });
+  const texto = fd.get('lista');
+  const filas = interpretarLista(texto, existentes);
   if (!filas.length) return false;
+  const malas = filas.filter(f => f.error);
+
+  // Vista previa: cómo se va a cargar cada línea, antes de guardar
+  const ok = await abrirFormulario({
+    titulo: malas.length ? `Hay ${malas.length} línea(s) para corregir` : `Se van a cargar ${filas.length} alumnos`,
+    textoOk: malas.length ? 'Corregir' : 'Cargar alumnos',
+    html: `
+      <div class="preview"><table>
+        <thead><tr><th>#</th><th>Apellido</th><th>Nombre</th><th>DNI</th><th></th></tr></thead>
+        <tbody>${filas.map(f => `<tr class="${f.error ? 'mal' : ''}"><td>${f.n}</td><td>${esc(f.apellido)}</td><td>${esc(f.nombre)}</td><td>${esc(f.dni || '—')}</td><td>${f.error ? esc(f.error) : icon('check')}</td></tr>`).join('')}</tbody>
+      </table></div>
+      ${malas.length ? '<p class="body-s" style="margin-top:12px">Tocá "Corregir" para volver al texto. No se guarda nada hasta que todas las líneas estén bien.</p>' : ''}`,
+  });
+  if (!ok) return false;
+  if (malas.length) return cargarVarios(curso, existentes, texto);
   try {
-    await q(client.from('alumnos').insert(filas));
+    await q(client.from('alumnos').insert(filas.map(f => ({ curso_id: curso.id, apellido: f.apellido, nombre: f.nombre, dni: f.dni }))));
     avisar(`Se agregaron ${filas.length} alumnos.`);
     return true;
   } catch (err) { avisarError(err); return false; }

@@ -22,7 +22,7 @@ export async function q(promesa) {
 }
 
 export async function cargarEscuelas() {
-  estado.escuelas = await q(client.from('escuelas').select('id, nombre, activa').order('nombre'));
+  estado.escuelas = await q(client.from('escuelas').select('id, nombre, activa, link_formulario').order('nombre'));
   return estado.escuelas;
 }
 

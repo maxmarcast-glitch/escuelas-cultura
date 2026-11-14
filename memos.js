@@ -11,22 +11,20 @@ export async function vistaMemos(cont) {
   const escId = escuelaTrabajo();
   let qm = client.from('memos').select('id, escuela_id, numero, fecha, asunto, detalle, link_doc').order('fecha', { ascending: false, nullsFirst: false }).limit(500);
   if (escId) qm = qm.eq('escuela_id', escId);
-  const [memos, ajustes] = await Promise.all([
-    q(qm),
-    q(client.from('ajustes').select('valor').eq('clave', 'link_formulario_memos')),
-  ]);
-  const linkForm = ajustes[0]?.valor?.trim();
+  const memos = await q(qm);
+  // Formularios a mostrar: el de la escuela elegida, o los de todas (master sin filtro)
+  const conForm = estado.escuelas.filter(e => e.activa && (!escId || e.id === escId));
   const sinEscuela = esMaster() && !escId ? memos.filter(m => !m.escuela_id).length : 0;
 
   cont.innerHTML = `
     ${chipsEscuela()}
     <div class="card" style="margin-bottom:16px">
-      <div class="row between">
-        <div><h3>Nuevo memo</h3>
-          <div class="body-s">Se completa en el formulario de Google; el documento lo genera Autocrat y aparece acá en unos minutos.</div></div>
-        ${linkForm
-          ? `<a class="btn btn-filled" href="${esc(linkForm)}" target="_blank" rel="noopener">${icon('open_in_new')} Abrir formulario</a>`
-          : `<span class="chip chip-warn">${esMaster() ? 'Cargá el link en Escuelas › Ajustes' : 'Formulario sin configurar'}</span>`}
+      <h3>Nuevo memo</h3>
+      <div class="body-s" style="margin-bottom:12px">Se completa en el formulario de Google; el documento lo genera Autocrat y aparece acá en unos minutos.</div>
+      <div class="row">
+        ${conForm.map(e => e.link_formulario
+          ? `<a class="btn ${conForm.length === 1 ? 'btn-filled' : 'btn-tonal'}" href="${esc(e.link_formulario)}" target="_blank" rel="noopener">${icon('open_in_new')} ${conForm.length === 1 ? 'Abrir formulario' : esc(e.nombre)}</a>`
+          : `<span class="chip chip-warn">${conForm.length === 1 ? '' : esc(e.nombre) + ': '}${esMaster() ? 'cargá el link en Escuelas' : 'formulario sin configurar'}</span>`).join('')}
       </div>
     </div>
     ${sinEscuela ? `<div class="banner warn">${icon('warning')}<div>Hay <b>${sinEscuela}</b> memo(s) cuya escuela no coincide con ninguna cargada en la app. Revisá que las opciones del formulario tengan exactamente el mismo nombre que en Escuelas.</div></div>` : ''}

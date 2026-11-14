@@ -8,6 +8,7 @@ import { vistaCuotas } from './cuotas.js';
 import { vistaMemos } from './memos.js';
 import { vistaUsuarios } from './usuarios.js';
 import { vistaEscuelas } from './escuelas.js';
+import { exportarTodo } from './exportar.js';
 
 const SECCIONES = [
   { id: 'cursos',   titulo: 'Cursos',   icono: 'menu_book',      vista: vistaCursos },
@@ -57,6 +58,7 @@ function mostrarApp() {
     if (b) location.hash = '#/' + b.dataset.ir;
   };
 
+  $('#btn-exportar').onclick = e => exportarTodo(e.currentTarget);
   $('#btn-salir').onclick = async () => { await client.auth.signOut(); location.hash = ''; location.reload(); };
 
   window.onhashchange = enrutar;

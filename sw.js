@@ -3,12 +3,12 @@
 // versión) y, si no hay conexión, se usa la copia guardada. Los datos de Neon
 // nunca se guardan acá.
 
-const CACHE = 'escuelas-v3';
+const CACHE = 'escuelas-v5';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'styles.css',
   'app.js', 'auth.js', 'comun.js', 'config.js', 'cuotas.js', 'cursos.js',
   'db.js', 'escuelas.js', 'memos.js', 'ui.js', 'usuarios.js',
-  'neon.js', 'icon.svg', 'icon-192.png', 'icon-512.png',
+  'neon.js', 'exportar.js', 'xlsx.js', 'icon.svg', 'icon-192.png', 'icon-512.png',
 ];
 
 self.addEventListener('install', e => {
