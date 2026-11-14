@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Escuelas · Cultura</title>
+  <meta name="theme-color" content="#006a6a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Pantalla de carga inicial -->
+  <div id="arranque" class="auth-wrap"><div class="spinner" role="status" aria-label="Cargando"></div></div>
+
+  <!-- Acceso (login / registro / recuperar / nueva contraseña / sin habilitar) -->
+  <div id="acceso" class="auth-wrap" hidden></div>
+
+  <!-- App -->
+  <div id="app" class="app" hidden>
+    <header class="top-bar">
+      <div class="grow">
+        <h1 class="title-l" id="titulo">Escuelas</h1>
+        <div class="sub" id="subtitulo"></div>
+      </div>
+      <button class="icon-btn" id="btn-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <span class="material-symbols-rounded">logout</span>
+      </button>
+    </header>
+
+    <nav class="nav-bar" id="nav" aria-label="Secciones"></nav>
+
+    <main id="vista" tabindex="-1"></main>
+  </div>
+
+  <dialog id="dialogo"></dialog>
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

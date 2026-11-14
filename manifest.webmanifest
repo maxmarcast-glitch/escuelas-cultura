@@ -1,0 +1,17 @@
+{
+  "name": "Escuelas · Cultura",
+  "short_name": "Escuelas",
+  "description": "Administración de cursos, alumnos, cuotas y memos de las escuelas de Cultura",
+  "id": "./?app=escuelas",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4fbfa",
+  "theme_color": "#006a6a",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
